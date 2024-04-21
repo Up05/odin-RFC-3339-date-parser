@@ -4,6 +4,7 @@ import "core:strconv"
 import "core:slice"
 import "core:strings"
 import "core:fmt"
+import "core:math"
 
 DateError :: enum {
     NONE,
@@ -140,16 +141,18 @@ to_string :: proc(date: Date, time_sep := ' ') -> (out: string, err: DateError) 
     
     if date.offset_hour == 0 && date.offset_minute == 0 do strings.write_rune(&b, 'Z')
     else {
+        if date.offset_minute != 0 && sign(date.offset_hour) != sign(date.offset_minute) {
+            date.offset_hour += sign(date.offset_minute)
+            date.offset_minute = 60 - abs(date.offset_minute) // sign doesn't matter, because later prints the abs of date.offset_minute
+            fmt.printf (
+                "DATE PARSER WARNING: signs of your Date.offset_hour & Date.offset_minute do not match! " +
+                "Given dates will be safely converted, but may be unexpected. " + 
+                "Go to line: %d in: %s to find out more.\n", #line - 5, #file
+            )
+        }
+        
         if date.offset_hour < 0 do strings.write_rune(&b, '-')
         else do strings.write_rune(&b, '+')
-
-        if date.offset_hour < 0 && date.offset_minute > 0 {
-            date.offset_hour -= 1
-            date.offset_minute = 60 - date.offset_minute
-        } else if date.offset_hour > 0 && date.offset_minute < 0 {
-            date.offset_hour += 1
-            date.offset_minute = 60 - date.offset_minute
-        } 
 
         fmt.sbprintf(&b, "%02d:%02d", abs(date.offset_hour), abs(date.offset_minute))
     }
@@ -158,22 +161,26 @@ to_string :: proc(date: Date, time_sep := ' ') -> (out: string, err: DateError) 
 }
 
 
+// odin doesn't have a sign_int???
+@private
+sign :: proc(#any_int a: int) -> int {
+    return -1 if a < 0 else   1 if a > 0 else   0
+}
 
-
-
-// this is a very specific function, kind of a misnomer, but whatever.
-@(private="file")
+// kind of a misnomer, but whatever.
+@private
 parse_int :: proc(num: string) -> (int, bool) {
    num, ok := strconv.parse_uint(num, 10) 
    return int(num), ok
 }
 
-@(private="file")
+@private
 between :: proc(a, lo, hi: int) -> bool {
     return a >= lo && a <= hi
 }
 
-@(private="file")
+
+@private
 days_in_month :: proc(year: int, month: int) -> int {
     if slice.any_of([] int { 1, 3, 5, 7, 8, 10, 12 }, month) do return 31
     if slice.any_of([] int { 4, 6, 9, 11 }, month) do return 30
@@ -182,7 +189,7 @@ days_in_month :: proc(year: int, month: int) -> int {
     return 28
 }
 
-@(private="file")
+@private
 leap_year :: proc(year: int) -> bool {
     return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))
 }
