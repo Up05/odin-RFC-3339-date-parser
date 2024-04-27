@@ -73,7 +73,7 @@ from_string :: proc(date: string) -> (out: Date, err: DateError) {
     
     // ##############################  T I M E  ##############################
 
-    if len(date) > 7 {
+    if len(date) >= 8 && date[2] == ':' {
         out.hour = parse_int2(date[0:2], .FAILED_AT_HOUR) or_return
         if !between(out.hour, 0, 23) do return out, .HOUR_OUT_OF_BOUNDS
 
