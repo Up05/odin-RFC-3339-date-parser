@@ -3,7 +3,7 @@
 Parser for the [RFC 3339 date & time spec](https://datatracker.ietf.org/doc/html/rfc3339) written in odin.
 I mainly wrote this for my TOML parser, so you're allowed to have just the date or just the time, or NOTHING AT ALLLLL.
 
-And by the way, it probably works fine. I want to go to sleep already.
+And by the way, it probably works.
 
 ```odin
   import dates "RFC_3339_date_parser"
