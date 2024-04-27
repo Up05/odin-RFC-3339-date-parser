@@ -10,4 +10,7 @@ And by the way, it probably works fine. I want to go to sleep already.
   // ...
   date, err := dates.from_string("1996-02-29 16:39:57-08:00")
   fmt.println(dates.to_string(date)) // prints: 1996-02-29 16:39:57-08:00 NONE
+
+  assert(dates.is_date_lax("1996-02-29 doesn't matter"))
+  assert(dates.is_date_lax("96:02:29   doesn't matter"))
 ```
