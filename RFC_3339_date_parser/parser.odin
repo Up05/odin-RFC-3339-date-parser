@@ -54,15 +54,12 @@ from_string :: proc(date: string) -> (out: Date, err: DateError) {
     
     // Because there has to be a leading zero
     if date[4:5] == "-" { 
-        out.year,  ok = parse_int(date[0:4])
-        if !ok do return out, .FAILED_AT_YEAR
+        out.year = parse_int2(date[0:4], .FAILED_AT_YEAR) or_return
 
-        out.month, ok = parse_int(date[5:7])
-        if !ok do return out, .FAILED_AT_MONTH
+        out.month = parse_int2(date[5:7], .FAILED_AT_MONTH) or_return
         if !between(out.month, 0, 12) do return out, .MONTH_OUT_OF_BOUNDS
 
-        out.day, ok = parse_int(date[8:10])
-        if !ok do return out, .FAILED_AT_DAY
+        out.day = parse_int2(date[8:10], .FAILED_AT_DAY) or_return
         if !between(out.day, 0, days_in_month(out.year, out.month)) do return out, .DAY_OUT_OF_BOUNDS
 
         if len(date) > 10 {
@@ -77,12 +74,10 @@ from_string :: proc(date: string) -> (out: Date, err: DateError) {
     // ##############################  T I M E  ##############################
 
     if len(date) > 7 {
-        out.hour, ok = parse_int(date[0:2])
-        if !ok do return out, .FAILED_AT_HOUR
+        out.hour = parse_int2(date[0:2], .FAILED_AT_HOUR) or_return
         if !between(out.hour, 0, 23) do return out, .HOUR_OUT_OF_BOUNDS
 
-        out.minute, ok = parse_int(date[3:5])
-        if !ok do return out, .FAILED_AT_MINUTE
+        out.minute = parse_int2(date[3:5], .FAILED_AT_MINUTE) or_return
         if !between(out.minute, 0, 59) do return out, .MINUTE_OUT_OF_BOUNDS
 
         date = date[6:] // because of "-"
@@ -98,12 +93,10 @@ from_string :: proc(date: string) -> (out: Date, err: DateError) {
             // fine to have lowercase here, because it wouldn't have been detected otherwise
             if strings.to_lower(date[:1]) == "z" do return
 
-            out.offset_hour, ok = parse_int(date[1:3])
-            if !ok do return out, .FAILED_AT_OFFSET_HOUR
+            out.offset_hour = parse_int2(date[1:3], .FAILED_AT_OFFSET_HOUR) or_return
             if !between(out.offset_hour, 0, 23) do return out, .OFFSET_HOUR_OUT_OF_BOUNDS
 
-            out.offset_minute, ok = parse_int(date[4:6])
-            if !ok do return out, .FAILED_AT_OFFSET_MINUTE
+            out.offset_minute = parse_int2(date[4:6], .FAILED_AT_OFFSET_MINUTE) or_return
             if !between(out.offset_minute, 0, 59) do return out, .OFFSET_MINUTE_OUT_OF_BOUNDS
 
             if date[:1] == "-" {
@@ -159,7 +152,36 @@ to_string :: proc(date: Date, time_sep := ' ') -> (out: string, err: DateError) 
 
     return strings.to_string(b), .NONE
 }
+// I don't need to test for both the date & the time
+is_date_lax :: proc(date: string) -> bool {
+    is_date := true
+    is_time := true
 
+    if len(date) >= 10 {
+        is_date &= are_all_numbers(date[0:4])
+        is_date &= are_all_numbers(date[5:7])
+        is_date &= are_all_numbers(date[8:10])
+        is_date &= date[4] == '-' && date[7] == '-'
+    } else do is_date = false
+
+    if !is_date && len(date) >= 8 {
+        is_time &= are_all_numbers(date[0:2])
+        is_time &= are_all_numbers(date[3:5])
+        is_time &= are_all_numbers(date[6:8])
+        is_time &= date[2] == ':' && date[5] == ':'
+    } else do is_time = false
+
+    return is_date || is_time
+}
+
+@private
+are_all_numbers :: proc(s: string) -> (out: bool) {
+    out = true
+    for r in s {
+        if r < '0' || r > '9' do out = false
+    }
+    return
+}
 
 // odin doesn't have a sign_int???
 @private
@@ -172,6 +194,12 @@ sign :: proc(#any_int a: int) -> int {
 parse_int :: proc(num: string) -> (int, bool) {
    num, ok := strconv.parse_uint(num, 10) 
    return int(num), ok
+}
+
+@private
+parse_int2 :: proc(num: string, potential: DateError) -> (int, DateError) {
+   num, ok := strconv.parse_uint(num, 10) 
+   return int(num), nil if ok else potential
 }
 
 @private
